@@ -1,19 +1,25 @@
 import express from 'express';
 import {
-  getProducts,
   createProduct,
+  getAllProducts,
+  getProductById,
   updateProduct,
   deleteProduct,
-  createProductsBulk,
+  bulkCreateProducts,
+  bulkUpdateProducts
 } from '../controllers/product.controller.js';
 
 const router = express.Router();
 
-router.get('/', getProducts);
+// Bulk operations
+router.post('/bulk', bulkCreateProducts);
+router.put('/bulk', bulkUpdateProducts);
+
+// Individual operations
 router.post('/', createProduct);
+router.get('/', getAllProducts);
+router.get('/:id', getProductById);
 router.put('/:id', updateProduct);
 router.delete('/:id', deleteProduct);
-
-router.post("/bulk", createProductsBulk);
 
 export default router;
