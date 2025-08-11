@@ -1,4 +1,5 @@
 import Product from '../models/product.model.js';
+import Category from '../models/category.model.js';
 
 // CREATE a new product
 export const createProduct = async (req, res) => {
@@ -35,7 +36,11 @@ export const getAllProducts = async (req, res) => {
       tags,
       minPrice,
       maxPrice,
-      specialOnly
+      specialOnly,
+      page = 1,
+      limit = 20,
+      sortBy = 'name',
+      sortOrder = 'asc'
     } = req.query;
 
     const query = {};
@@ -48,9 +53,19 @@ export const getAllProducts = async (req, res) => {
       ];
     }
 
-    // Filter by Category
+    // Filter by Category (including subcategories)
     if (category) {
-      query.category = category;
+      // Find the selected category and its subcategories
+      const selectedCategory = await Category.findById(category);
+      if (selectedCategory) {
+        // Get all subcategories of the selected category
+        const subcategories = await Category.find({ parent: category });
+        const categoryIds = [category, ...subcategories.map(sub => sub._id)];
+        query.category = { $in: categoryIds };
+      } else {
+        // If category not found, use original ID (will return no results)
+        query.category = category;
+      }
     }
 
     // Filter by Brand
@@ -76,12 +91,51 @@ export const getAllProducts = async (req, res) => {
       if (maxPrice) query.price.$lte = parseFloat(maxPrice);
     }
 
+    // Sorting
+    const sortOptions = {};
+    if (sortBy === 'price') {
+      sortOptions.price = sortOrder === 'desc' ? -1 : 1;
+    } else if (sortBy === 'name') {
+      sortOptions.name = sortOrder === 'desc' ? -1 : 1;
+    } else if (sortBy === 'brand') {
+      sortOptions['brand.name'] = sortOrder === 'desc' ? -1 : 1;
+    } else if (sortBy === 'category') {
+      sortOptions['category.name'] = sortOrder === 'desc' ? -1 : 1;
+    } else {
+      sortOptions.createdAt = -1; // Default sort by newest
+    }
+
+    // Pagination
+    const pageNumber = parseInt(page);
+    const limitNumber = parseInt(limit);
+    const skip = (pageNumber - 1) * limitNumber;
+
+    // Get total count for pagination info
+    const totalProducts = await Product.countDocuments(query);
+    const totalPages = Math.ceil(totalProducts / limitNumber);
+
+    // Get products with pagination
     const products = await Product.find(query)
       .populate('category', 'name')
       .populate('brand', 'name')
-      .populate('tags', 'name');
+      .populate('tags', 'name')
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(limitNumber);
 
-    res.json(products);
+    res.json({
+      products,
+      pagination: {
+        currentPage: pageNumber,
+        totalPages,
+        totalProducts,
+        limit: limitNumber,
+        hasNextPage: pageNumber < totalPages,
+        hasPrevPage: pageNumber > 1,
+        nextPage: pageNumber < totalPages ? pageNumber + 1 : null,
+        prevPage: pageNumber > 1 ? pageNumber - 1 : null
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
