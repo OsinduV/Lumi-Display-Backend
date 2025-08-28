@@ -20,9 +20,9 @@ const productSchema = new mongoose.Schema({
 
   price:               { type: Number },
   mrp:                 { type: Number },
-  redistributionPrice: { type: Number },
-  specialPrice:        { type: Number },
-  isSpecialPriceActive:{ type: Boolean, default: false }
+  discountedPrice:     { type: Number },
+  minimumPrice:        { type: Number },
+  activePriceType:     { type: String, enum: ['price', 'mrp', 'discountedPrice', 'minimumPrice'], default: 'price' }
 }, { timestamps: true });
 
 const Product = mongoose.model('Product', productSchema);
