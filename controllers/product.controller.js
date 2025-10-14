@@ -79,12 +79,9 @@ export const getAllProducts = async (req, res) => {
       query.tags = { $in: tagArray };
     }
 
-    // Filter by Active Price Type  
+    // Filter by Special Price
     if (specialOnly === 'true') {
-      query.$or = [
-        { activePriceType: 'discountedPrice' },
-        { activePriceType: 'minimumPrice' }
-      ];
+      query.isSpecialPriceActive = true;
     }
 
     // Filter by Price Range
